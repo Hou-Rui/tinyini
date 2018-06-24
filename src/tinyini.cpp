@@ -15,27 +15,41 @@ ExpectFailedError::ExpectFailedError(char expect)
 {
     std::stringstream ss;
     ss << "expected " << expect;
-    error(ss.str());
+    error(ss.str()); 
 }
 
 
 // string utilities
-bool notBlank(char c)
-{
-    return !std::isblank(c);
-}
 
 std::string util::trim(const std::string &str)
 {
-    auto right = std::find_if(str.rbegin(), str.rend(), notBlank).base();
-    auto left = std::find_if(str.begin(), right, notBlank);
+    static auto not_blank = [](char c) { return !std::isblank(c); };
+    auto right = std::find_if(str.rbegin(), str.rend(), not_blank).base();
+    auto left = std::find_if(str.begin(), right, not_blank);
     return std::string(left, right);
 }
-
+ 
 DataNode util::split(const std::string &str, char delim)
 {
     int cnt = str.find_first_of(delim);
     return std::make_pair(str.substr(0, cnt), str.substr(cnt + 1));
+}
+
+std::vector<std::string> util::seqsplit(const std::string &str, char delim)
+{
+    std::string::size_type pos1, pos2;
+    std::vector<std::string> res;
+    pos2 = str.find(delim);
+    pos1 = 0;
+    while (pos2 != std::string::npos)
+    {
+        res.push_back(str.substr(pos1, pos2 - pos1));
+        pos1 = pos2 + 1;
+        pos2 = str.find(delim, pos1);
+    }
+    if (pos1 != str.length())
+        res.push_back(str.substr(pos1));
+    return res;
 }
 
 std::string util::unbrace(const std::string &str, char left, char right)
@@ -93,13 +107,19 @@ Section &Section::operator()(const std::string &name)
 
 void Section::write(std::ostream &out)
 {
-    for (auto it : _data)
-        out << it.first << "=" << it.second << std::endl;
-    for (auto it : _children)
+    static std::function<void(std::string, Section *)> write_rec;
+    write_rec = [&out](std::string path, Section *sec)
     {
-        out << "[" << it.first << "]" << std::endl;
-        it.second->write(out);
-    }
+        out << "[" << path << "]" << std::endl; 
+        for (auto it : sec->_data)
+            out << it.first << "=" << it.second << std::endl;
+        for (auto it : sec->_children)
+        {
+            auto new_path = path.empty() ? it.first : (path + "." + it.first);
+            write_rec(new_path, it.second);
+        }
+    };
+    write_rec("", this);
 }
 
 void Section::writeToFile(const std::string &file_name)
@@ -137,10 +157,17 @@ Section Parser::parse(std::istream &stream)
         line = util::trim(line);
         if (line.empty() || line[0] == ';')
             continue;
-        else if (line[0] == '[')
+        line = util::split(line, ';').first;
+        if (line[0] == '[')
         {
+            current_child = &root;
             auto section_name = util::unbrace(line, '[', ']');
-            current_child = root._children[section_name] = new Section();
+            auto section_tree = util::seqsplit(section_name, '.');
+            for (auto sec: section_tree)
+            {
+                current_child->_children[sec] = new Section();
+                current_child = current_child->_children[sec];
+            }
         }
         else
         {

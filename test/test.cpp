@@ -25,5 +25,15 @@ int main()
         std::cout << error.what() << std::endl;
     }
 
+    try
+    {
+        tinyini::Section ini3 = tinyini::Parser::sectionFromFile("./test4.ini");
+        std::cout << ini3("ROOT")("CHILD")["info"] << std::endl;
+    }
+    catch (tinyini::KeyError &error)
+    {
+        std::cout << error.what() << std::endl;
+    }
+
     return 0;
 }

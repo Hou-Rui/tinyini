@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <map>
+#include <vector>
 #include <algorithm>
 #include <exception>
 
@@ -20,6 +21,7 @@ namespace util
 {
 std::string trim(const std::string &str);
 DataNode split(const std::string &str, char delim);
+std::vector<std::string> seqsplit(const std::string &str, char delim);
 std::string unbrace(const std::string &str, char left, char right);
 } // namespace util
 
