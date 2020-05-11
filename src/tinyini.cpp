@@ -28,7 +28,7 @@ std::string util::trim(const std::string &str)
     auto left = std::find_if(str.begin(), right, not_blank);
     return std::string(left, right);
 }
- 
+
 DataNode util::split(const std::string &str, char delim)
 {
     int cnt = str.find_first_of(delim);
